@@ -3,31 +3,28 @@
 namespace Arara\Process\Ipc;
 
 
+use ErrorException;
+
 class SharedMemory implements Ipc
 {
-
-    private $id;
+    private $id = null;
     private $data = array();
     private static $number = 1;
-
-
-    public function __construct()
-    {
-        $this->id = @shmop_open(self::$number++, 'c', 0777, 1024);
-        if (false === $this->id) {
-            $message = 'Could not create shared memory segment';
-            throw new \RuntimeException($message);
-        }
-        $this->size = shmop_size($this->id);
-    }
+    private $ftokFile = null;
+    private $size = 0;
 
     public function save($name, $value)
     {
         $this->data[$name] = $value;
 
-        $data = @serialize($this->data);
+        $data = json_encode($this->data);
 
-        $bytesWritten = @shmop_write($this->id, $data, 0);
+        $realSize = strlen($data);
+        if($this->size < $realSize) {
+            $this->declareMemoryChunk($realSize);
+        }
+
+        $bytesWritten = shmop_write($this->id, $data, 0);
         if ($bytesWritten != strlen($data)) {
             $message = 'Could not write the entire length of data';
             throw new \RuntimeException($message);
@@ -44,7 +41,7 @@ class SharedMemory implements Ipc
             throw new \RuntimeException($message);
         }
 
-        $data = @unserialize($loaded);
+        $data = json_decode(trim($loaded), true);
         if (!is_array($data)) {
             $data = array();
         }
@@ -59,16 +56,54 @@ class SharedMemory implements Ipc
 
     public function destroy()
     {
-        @shmop_delete($this->id);
+        shmop_delete($this->id);
 
         return $this;
     }
 
     public function __destruct()
     {
-        @shmop_close($this->id);
+        var_dump('DEBUG: delete and close mem_block '.$this->id);
+        var_dump("DEBUG: ". shmop_delete($this->id) ? 'true' : 'false');
+        shmop_close($this->id);
+
+        var_dump('DEBUG: delete file '.$this->ftokFile);
+        @unlink($this->ftokFile);
     }
 
+    /**
+     * @param int $size
+     * @throws \RuntimeException
+     */
+    private function declareMemoryChunk($size = 1024)
+    {
+        if($this->id !== null) {
+            $this->__destruct();
+        }
 
+        $id = $this->getFtok();
+
+        $this->id = @shmop_open($id, 'c', 0777, $size);
+        if (false === $this->id) {
+            $message = 'Could not create shared memory segment';
+            throw new \RuntimeException($message);
+        } else {
+            var_dump('DEBUG: create mem_block '.$this->id);
+        }
+
+        $this->size = @shmop_size($this->id);
+    }
+
+    /**
+     * @return int
+     */
+    private function getFtok()
+    {
+        $this->ftokFile = tempnam(sys_get_temp_dir(), "GT_IPC".self::$number);
+        var_dump('DEBUG: create file'.$this->ftokFile);
+        $id = ftok(__FILE__, 't');
+
+        self::$number++;
+        return $id;
+    }
 }
-
