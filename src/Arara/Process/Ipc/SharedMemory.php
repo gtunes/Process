@@ -9,7 +9,6 @@ class SharedMemory implements Ipc
 {
     private $id = null;
     private $data = array();
-    private static $number = 1;
     private $ftokFile = null;
     private $size = 0;
 
@@ -63,11 +62,8 @@ class SharedMemory implements Ipc
 
     public function __destruct()
     {
-        var_dump('DEBUG: delete and close mem_block '.$this->id);
-        var_dump("DEBUG: ". shmop_delete($this->id) ? 'true' : 'false');
+        shmop_delete($this->id);
         shmop_close($this->id);
-
-        var_dump('DEBUG: delete file '.$this->ftokFile);
         @unlink($this->ftokFile);
     }
 
@@ -87,8 +83,6 @@ class SharedMemory implements Ipc
         if (false === $this->id) {
             $message = 'Could not create shared memory segment';
             throw new \RuntimeException($message);
-        } else {
-            var_dump('DEBUG: create mem_block '.$this->id);
         }
 
         $this->size = @shmop_size($this->id);
@@ -99,11 +93,9 @@ class SharedMemory implements Ipc
      */
     private function getFtok()
     {
-        $this->ftokFile = tempnam(sys_get_temp_dir(), "GT_IPC".self::$number);
-        var_dump('DEBUG: create file'.$this->ftokFile);
+        $this->ftokFile = tempnam(sys_get_temp_dir(), "GT_IPC");
         $id = ftok(__FILE__, 't');
 
-        self::$number++;
         return $id;
     }
 }
