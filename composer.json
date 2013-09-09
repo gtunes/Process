@@ -1,9 +1,9 @@
 {
-    "name": "arara/process",
+    "name": "gtunes/process",
     "type": "library",
     "description": "Simple package for fork process",
     "keywords": ["pcntl", "posix", "daemom", "fork", "process"],
-    "homepage": "https://github.com/Arara/Process",
+    "homepage": "https://github.com/gtunes/Process",
     "license" : "MIT",
     "authors" : [
         {
