@@ -62,9 +62,13 @@ class SharedMemory implements Ipc
 
     public function __destruct()
     {
-        shmop_delete($this->id);
-        shmop_close($this->id);
-        @unlink($this->ftokFile);
+        try {
+            shmop_delete($this->id);
+            shmop_close($this->id);
+            @unlink($this->ftokFile);
+        } catch(\Exception $e) {
+            
+        }
     }
 
     /**
